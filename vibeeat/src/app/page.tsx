@@ -1,20 +1,30 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getCurrentUser } from './actions/auth'
+import { getRecommendedBureaus } from '@/lib/recommendation'
 
 export default async function Home() {
   const user = await getCurrentUser()
-  const bureaus = await prisma.bureau.findMany({
-    where: { status: 'RECRUITING' },
-    include: {
-      host: true,
-      mealSet: {
-        include: { restaurant: true }
+  
+  let bureaus;
+  if (user) {
+    bureaus = await getRecommendedBureaus(user.id)
+  } else {
+    bureaus = await prisma.bureau.findMany({
+      where: { 
+        status: 'RECRUITING',
+        eventTime: { gt: new Date() } // Hide past events
       },
-      orders: true // To count participants
-    },
-    orderBy: { eventTime: 'asc' }
-  })
+      include: {
+        host: true,
+        mealSet: {
+          include: { restaurant: true }
+        },
+        orders: true // To count participants
+      },
+      orderBy: { eventTime: 'asc' }
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
