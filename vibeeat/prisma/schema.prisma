@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  nickname  String?
+  avatar    String?
+  school    String?
+  company   String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hostedBureaus Bureau[]  @relation("Host")
+  orders        Order[]
+  messages      Message[]
+  
+  // Phase 2: Social Trust & Vibe Upgrade
+  photos        String?   // JSON string of photo URLs
+  interests     String?   // JSON string of interest tags
+  vibeScore     Int       @default(100)
+  realName      String?
+  idCard        String?
+  isVerified    Boolean   @default(false)
+
+  reviewsGiven    Review[] @relation("Reviewer")
+  reviewsReceived Review[] @relation("TargetUser")
+}
+
+model Restaurant {
+  id        Int       @id @default(autoincrement())
+  name      String
+  location  String
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  mealSets  MealSet[]
+  
+  // Phase 3: Merchant Empowerment
+  splitRatio Float    @default(0.9) // 90% to merchant, 10% to platform
+}
+
+model MealSet {
+  id           Int        @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  title        String
+  price        Float
+  minPeople    Int
+  maxPeople    Int
+  menuDetails  String // JSON string or simple text description
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  bureaus      Bureau[]
+}
+
+model Bureau {
+  id          Int      @id @default(autoincrement())
+  hostId      Int
+  host        User     @relation("Host", fields: [hostId], references: [id])
+  mealSetId   Int
+  mealSet     MealSet  @relation(fields: [mealSetId], references: [id])
+  status      String   @default("RECRUITING") // RECRUITING, COMPLETED, CANCELED
+  eventTime   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+  messages    Message[]
+  reviews     Review[]
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  bureauId  Int
+  bureau    Bureau   @relation(fields: [bureauId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  status    String   @default("UNPAID") // UNPAID, PAID, CANCELLED
+  cancelledAt DateTime?
+  refundAmount Float? @default(0)
+  refundStatus String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  bureauId  Int
+  bureau    Bureau   @relation(fields: [bureauId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id           Int      @id @default(autoincrement())
+  bureauId     Int
+  bureau       Bureau   @relation(fields: [bureauId], references: [id])
+  reviewerId   Int
+  reviewer     User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  targetUserId Int
+  targetUser   User     @relation("TargetUser", fields: [targetUserId], references: [id])
+  tags         String   // JSON string e.g. ["Humorous", "Punctual"]
+  comment      String?
+  createdAt    DateTime @default(now())
+}
